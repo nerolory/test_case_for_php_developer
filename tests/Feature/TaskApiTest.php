@@ -15,6 +15,23 @@ final class TaskApiTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * @return list<string>
+     */
+    private function expectedTaskJsonKeys(): array
+    {
+        return [
+            'id',
+            'title',
+            'description',
+            'due_date',
+            'create_date',
+            'status',
+            'priority',
+            'category',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function validPayload(): array
@@ -53,7 +70,8 @@ final class TaskApiTest extends TestCase
         ]);
 
         $response->assertUnprocessable()
-            ->assertJsonStructure(['message', 'errors']);
+            ->assertJsonStructure(['message', 'errors'])
+            ->assertJsonValidationErrors(['title', 'due_date']);
     }
 
     public function test_can_list_tasks_with_pagination_headers(): void
@@ -69,6 +87,7 @@ final class TaskApiTest extends TestCase
             ->assertHeader('X-Last-Page', '2');
 
         $this->assertCount(10, $response->json());
+        $response->assertJsonStructure([$this->expectedTaskJsonKeys()]);
     }
 
     public function test_can_search_tasks_by_title(): void
@@ -80,6 +99,7 @@ final class TaskApiTest extends TestCase
 
         $response->assertOk();
         $this->assertCount(1, $response->json());
+        $response->assertJsonStructure([$this->expectedTaskJsonKeys()]);
         $this->assertSame('Задача1 уникальная', $response->json('0.title'));
     }
 
@@ -90,8 +110,11 @@ final class TaskApiTest extends TestCase
         $response = $this->getJson('/api/tasks/'.$task->id);
 
         $response->assertOk()
+            ->assertJsonStructure($this->expectedTaskJsonKeys())
             ->assertJsonPath('id', $task->id)
-            ->assertJsonPath('title', $task->title);
+            ->assertJsonPath('title', $task->title)
+            ->assertJsonPath('status', TaskStatus::Pending->value)
+            ->assertJsonPath('priority', TaskPriority::Medium->value);
     }
 
     public function test_show_returns_not_found(): void
@@ -309,14 +332,20 @@ final class TaskApiTest extends TestCase
         $response = $this->getJson('/api/tasks?per_page=2&page=10');
 
         $response->assertOk()
-            ->assertJson([]);
+            ->assertJson([])
+            ->assertHeader('X-Total-Count', '3')
+            ->assertHeader('X-Per-Page', '2')
+            ->assertHeader('X-Current-Page', '10')
+            ->assertHeader('X-Last-Page', '2');
     }
 
-    public function test_show_returns_not_found_for_non_numeric_id(): void
+    public function test_show_returns_not_found_when_id_is_not_numeric(): void
     {
         $response = $this->getJson('/api/tasks/abc');
 
-        $response->assertNotFound();
+        $response->assertNotFound()
+            ->assertJsonStructure(['message'])
+            ->assertJsonMissing(['message' => 'Задача не найдена.']);
     }
 
     public function test_create_normalizes_category(): void
@@ -355,12 +384,13 @@ final class TaskApiTest extends TestCase
         ]);
     }
 
-    public function test_create_without_create_date_uses_moscow_now(): void
+    public function test_create_without_create_date_defaults_to_now(): void
     {
         $fixedNow = now();
         $this->travelTo($fixedNow);
 
-        $dueDate = $fixedNow->format('Y-m-d\TH:i:s');
+        $dueDate = '2025-06-01T12:00:00';
+        $expectedCreateDate = $fixedNow->format('Y-m-d\TH:i:s');
 
         $response = $this->postJson('/api/tasks', [
             'title' => 'Задача',
@@ -373,7 +403,8 @@ final class TaskApiTest extends TestCase
 
         $task = Task::query()->find($response->json('id'));
         $this->assertNotNull($task);
-        $this->assertSame($dueDate, $task->create_date->format('Y-m-d\TH:i:s'));
+        $this->assertSame($expectedCreateDate, $task->create_date->format('Y-m-d\TH:i:s'));
+        $this->assertNotSame($dueDate, $task->create_date->format('Y-m-d\TH:i:s'));
     }
 
     public function test_update_rejects_empty_title(): void
@@ -402,6 +433,7 @@ final class TaskApiTest extends TestCase
 
         $response->assertOk();
         $this->assertCount(1, $response->json());
+        $response->assertJsonStructure([$this->expectedTaskJsonKeys()]);
         $this->assertSame('ЗАДАЧА Уникальная', $response->json('0.title'));
     }
 }

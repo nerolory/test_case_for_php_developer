@@ -131,7 +131,5 @@ final class CachingTaskRepositoryTest extends TestCase
         $repository = new CachingTaskRepository($inner, $cache);
 
         $repository->delete($task);
-
-        $this->addToAssertionCount(1);
     }
 }

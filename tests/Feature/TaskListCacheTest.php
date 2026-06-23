@@ -83,7 +83,7 @@ final class TaskListCacheTest extends TestCase
         $this->assertFalse(Cache::tags([$tag])->has('tasks:list:probe'));
     }
 
-    public function test_update_forgets_only_updated_task_show_cache(): void
+    public function test_update_invalidates_list_cache_and_forgets_updated_task_show_cache(): void
     {
         $unchanged = Task::factory()->create(['title' => 'Без изменений']);
         $updated = Task::factory()->create(['title' => 'Будет изменена']);
@@ -97,6 +97,9 @@ final class TaskListCacheTest extends TestCase
         $this->assertTrue(Cache::has($unchangedKey));
         $this->assertTrue(Cache::has($updatedKey));
 
+        $tag = (string) config('cache.task_list.tag');
+        Cache::tags([$tag])->put('tasks:list:probe', 'stale', 60);
+
         $this->putJson('/api/tasks/'.$updated->id, [
             'title' => 'Изменена',
             'due_date' => '2025-01-25T18:00:00',
@@ -105,6 +108,7 @@ final class TaskListCacheTest extends TestCase
             'status' => 'выполнена',
         ])->assertOk();
 
+        $this->assertFalse(Cache::tags([$tag])->has('tasks:list:probe'));
         $this->assertTrue(Cache::has($unchangedKey));
         $this->assertFalse(Cache::has($updatedKey));
     }

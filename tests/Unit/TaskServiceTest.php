@@ -135,7 +135,5 @@ final class TaskServiceTest extends TestCase
         $service = new TaskService($repository);
 
         $service->delete(3);
-
-        $this->addToAssertionCount(1);
     }
 }

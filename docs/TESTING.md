@@ -31,8 +31,8 @@ docker compose exec app sh -c "vendor/bin/pint --test && vendor/bin/phpstan anal
 
 Структура тестов:
 * Feature (tests/Feature/TaskApiTest.php) — проверка эндпоинтов API: CRUD, поиск, стратегии сортировки, пагинация, ошибки 422 и 404.
-* Feature (tests/Feature/TaskListCacheTest.php) — проверка интеграции с Redis: кэширование списков задач и инвалидация кэша при мутациях.
-* Unit (tests/Unit/*) — изолированные тесты бизнес-логики сервиса, репозитория, DTO и нормализации категорий.
+* Feature (tests/Feature/TaskListCacheTest.php) — интеграция с Redis: кэширование списков задач и инвалидация кэша при мутациях.
+* Unit (tests/Unit/*) — тесты сервиса, репозитория, DTO, стратегий сортировки и нормализации категорий; часть стратегий проверяется через SQLite in-memory.
 
 Выборочный запуск:
 * Запуск только тестов API:
@@ -58,10 +58,11 @@ docker compose exec app sh -c "vendor/bin/pint --test && vendor/bin/phpstan anal
 ## 5. Ожидаемое поведение API в тестах
 
 * Создание задачи: HTTP-код 201 Created, тело ответа содержит id и сообщение об успехе.
-* Получение и список задач: HTTP-код 200 OK, структура JSON строго соответствует openapi.yaml.
+* Получение и список задач: HTTP-код 200 OK, тело содержит обязательные поля схемы Task из openapi.yaml (id, title, description, due_date, create_date, status, priority, category).
 * Обновление и удаление: HTTP-код 200 OK, тело содержит сообщение об успешном выполнении.
 * Невалидные данные: HTTP-код 422 Unprocessable Entity, структура содержит message и массив errors.
 * Несуществующая задача: HTTP-код 404 Not Found, тело ответа: {"message": "Задача не найдена."}.
+* Нечисловой id в пути: HTTP-код 404 Not Found, JSON с полем message (ошибка маршрутизации, не «Задача не найдена.»).
 * Пагинация списка: Заголовки ответа содержат метаданные X-Total-Count, X-Per-Page, X-Current-Page, X-Last-Page.
 
 ## 6. Конфигурация тестового окружения
@@ -81,7 +82,7 @@ docker compose exec app sh -c "vendor/bin/pint --test && vendor/bin/phpstan anal
 3. Подготовка приложения (копирование .env, генерация ключа key:generate, запуск миграций). В качестве сервисов для джобы поднимаются контейнеры MySQL и Redis.
 4. Выполнение шага Pint (vendor/bin/pint --test).
 5. Выполнение шага PHPStan (vendor/bin/phpstan analyse).
-6. Выполнение шага Tests (php artisan test с установленным CACHE_STORE=redis).
+6. Выполнение шага Tests (php artisan test). В phpunit.xml для изоляции feature-тестов кэш по умолчанию отключён (array); TaskListCacheTest переключает Redis через config(). Переменные CACHE_STORE=redis в CI обеспечивают доступность Redis для cache-тестов.
 
 Результаты CI доступны на GitHub во вкладке Actions. Зеленая галочка означает успешное прохождение всех проверок, красный крест указывает на падение конкретного шага. Локальный запуск трех базовых команд в Docker полностью эквивалентен логике CI.
 

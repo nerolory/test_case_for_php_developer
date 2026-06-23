@@ -45,8 +45,6 @@ final class SortStrategyResolverTest extends TestCase
         $query = Task::query();
         $this->app->make(DueDateSortStrategy::class)->apply($query);
 
-        $titles = $query->pluck('title')->all();
-
-        $this->assertSame(['Ранняя', 'Поздняя'], $titles);
+        $this->assertSame(['Ранняя', 'Поздняя'], $query->pluck('title')->all());
     }
 }
