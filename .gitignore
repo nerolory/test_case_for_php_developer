@@ -1,0 +1,49 @@
+# Личные/служебные документы
+/docs/temp/
+/docs/TEMP/
+/docs/CHECKLIST.md
+
+# Зависимости и сборка
+/node_modules
+/vendor
+/public/build
+/public/hot
+/public/storage
+
+# Окружение и секреты
+.env
+.env.backup
+.env.production
+.env.*.local
+/auth.json
+
+# Логи
+*.log
+npm-debug.log
+yarn-error.log
+
+# Кэш, сессии, сгенерированные артефакты Laravel
+/.phpunit.cache
+/.phpunit.result.cache
+/storage/*.key
+/storage/pail
+
+# IDE и локальные инструменты
+/.codex
+/.cursor/
+/.fleet
+/.idea
+/.nova
+/.phpactor.json
+/.vscode
+/.zed
+_ide_helper.php
+
+# ОС
+.DS_Store
+Thumbs.db
+
+# Прочее
+Homestead.json
+Homestead.yaml
+/public/fonts-manifest.dev.json
